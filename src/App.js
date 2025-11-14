@@ -1,24 +1,26 @@
-import logo from './logo.svg';
-import './App.css';
+// src/App.js
+import React from "react";
+import { PublicClientApplication } from "@azure/msal-browser";
+import { MsalProvider } from "@azure/msal-react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
+import { msalConfig } from "./msalConfig";
+
+import HomePage from "./pages/HomePage";
+import BookPage from "./pages/BookPage";
+
+const pca = new PublicClientApplication(msalConfig);
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <MsalProvider instance={pca}>
+      <Router>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/book/:id" element={<BookPage />} />
+        </Routes>
+      </Router>
+    </MsalProvider>
   );
 }
 
