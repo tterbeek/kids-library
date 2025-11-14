@@ -1,6 +1,5 @@
 // src/services/graphClient.js
 import axios from "axios";
-import { loginRequest } from "../msalConfig";
 
 let accessToken = null;
 
