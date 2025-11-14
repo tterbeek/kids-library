@@ -1,4 +1,3 @@
-// src/pages/HomePage.js
 import React, { useEffect, useState } from "react";
 import Header from "../components/Header";
 import BookGrid from "../components/BookGrid";
@@ -12,33 +11,61 @@ export default function HomePage() {
   console.log("MSAL accounts:", accounts);
 
   useEffect(() => {
-    const getToken = async () => {
-      if (accounts.length === 0) return;
+    const authenticate = async () => {
+      // 1) If no accounts, user is not logged in → popup login
+      if (accounts.length === 0) {
+        console.log("No accounts — triggering loginPopup");
+        await instance.loginPopup({
+          scopes: [
+            "User.Read",
+            "Files.Read",
+            "Files.Read.All",
+            "Sites.Read.All"
+          ],
+        });
+        return; // → after login, useEffect will run again
+      }
 
-      console.log("Requesting token...");
+      // 2) We have an account → try silent token
+      try {
+        console.log("Trying silent token…");
+        const result = await instance.acquireTokenSilent({
+          scopes: [
+            "User.Read",
+            "Files.Read",
+            "Files.Read.All",
+            "Sites.Read.All"
+          ],
+          account: accounts[0],
+        });
 
-      const result = await instance.acquireTokenSilent({
-        scopes: [
-          "User.Read",
-          "Files.Read",
-          "Files.Read.All",
-          "Sites.Read.All"
-        ],
-        account: accounts[0],
-      });
+        console.log("Token scopes:", result.scopes);
+        setAccessToken(result.accessToken);
+        setTokenLoaded(true);
+      } catch (err) {
+        console.error("Silent token failed:", err);
 
-      console.log("Access token:", result.accessToken);
-      console.log("Token scopes:", result.scopes);
+        // 3) If silent fails → fallback login
+        const result = await instance.loginPopup({
+          scopes: [
+            "User.Read",
+            "Files.Read",
+            "Files.Read.All",
+            "Sites.Read.All"
+          ],
+        });
 
-      setAccessToken(result.accessToken);
-      setTokenLoaded(true);  // allow BookGrid to load AFTER token is set
+        console.log("Token scopes after popup:", result.scopes);
+        setAccessToken(result.accessToken);
+        setTokenLoaded(true);
+      }
     };
 
-    getToken().catch(err => console.error("Token error:", err));
+    authenticate();
   }, [accounts, instance]);
 
   if (!tokenLoaded) {
-    return <div>Loading authentication…</div>;
+    return <div>Loading authentication...</div>;
   }
 
   return (
