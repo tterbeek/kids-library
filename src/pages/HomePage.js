@@ -1,3 +1,5 @@
+// src/pages/HomePage.js
+
 import React, { useEffect, useState } from "react";
 import Header from "../components/Header";
 import BookGrid from "../components/BookGrid";
@@ -11,47 +13,29 @@ export default function HomePage() {
   console.log("MSAL accounts:", accounts);
 
   useEffect(() => {
-    const authenticate = async () => {
-      // 1) If no accounts, user is not logged in → popup login
-useEffect(() => {
-  const run = async () => {
-    await instance.initialize();   // <-- IMPORTANT FIX
+    const runAuth = async () => {
 
-    if (accounts.length === 0) {
-      console.log("No accounts, running loginPopup...");
-      await instance.loginPopup({
-        scopes: ["User.Read", "Files.Read", "Files.Read.All", "Sites.Read.All"]
-      });
-      return;
-    }
+      // Ensure MSAL is initialized
+      await instance.initialize();
 
-    try {
-      console.log("Trying silent token...");
-      const result = await instance.acquireTokenSilent({
-        scopes: ["User.Read", "Files.Read", "Files.Read.All", "Sites.Read.All"],
-        account: accounts[0]
-      });
+      // ---------- 1. No accounts → loginPopup ----------
+      if (accounts.length === 0) {
+        console.log("No accounts, running loginPopup...");
+        await instance.loginPopup({
+          scopes: [
+            "User.Read",
+            "Files.Read",
+            "Files.Read.All",
+            "Sites.Read.All"
+          ],
+        });
 
-      console.log("Token scopes:", result.scopes);
-      setAccessToken(result.accessToken);
-      setTokenLoaded(true);
-    } catch (err) {
-      console.error("Silent token failed:", err);
-      const result = await instance.loginPopup({
-        scopes: ["User.Read", "Files.Read", "Files.Read.All", "Sites.Read.All"]
-      });
-      setAccessToken(result.accessToken);
-      setTokenLoaded(true);
-    }
-  };
+        return; // After login, component rerenders → useEffect runs again
+      }
 
-  run().catch(console.error);
-}, [accounts, instance]);
-
-
-      // 2) We have an account → try silent token
+      // ---------- 2. Try silent token ----------
       try {
-        console.log("Trying silent token…");
+        console.log("Trying silent token...");
         const result = await instance.acquireTokenSilent({
           scopes: [
             "User.Read",
@@ -68,7 +52,7 @@ useEffect(() => {
       } catch (err) {
         console.error("Silent token failed:", err);
 
-        // 3) If silent fails → fallback login
+        // ---------- 3. Fallback interactive login ----------
         const result = await instance.loginPopup({
           scopes: [
             "User.Read",
@@ -84,7 +68,7 @@ useEffect(() => {
       }
     };
 
-    authenticate();
+    runAuth().catch(console.error);
   }, [accounts, instance]);
 
   if (!tokenLoaded) {
