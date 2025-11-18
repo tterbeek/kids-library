@@ -6,40 +6,57 @@ import { useMsal } from "@azure/msal-react";
 import { setAccessToken, listVideos } from "../services/graphClient";
 
 export default function HomePage({ navigateToBook = () => {}, setBooks = () => {} }) {
-  const { instance, accounts } = useMsal();
+  const { instance } = useMsal();
 
   const [tokenLoaded, setTokenLoaded] = useState(false);
   const [localBooks, setLocalBooks] = useState([]);
 
-  // 1) Acquire token once
-useEffect(() => {
-  const loadAuth = async () => {
-    // Initialize MSAL properly BEFORE checking accounts
-    await instance.initialize();
+  // ----------------------------------------------------
+  // 1) Handle Redirect Callback FIRST
+  // (Only runs after MS redirects back to your app)
+  // ----------------------------------------------------
+  useEffect(() => {
+    instance
+      .handleRedirectPromise()
+      .then(async (response) => {
+        // If this was a redirect response, extract the token from it
+        if (response && response.accessToken) {
+          setAccessToken(response.accessToken);
+          setTokenLoaded(true);
+          return;
+        }
 
-    const allAccounts = instance.getAllAccounts();
+        // Otherwise try silent sign-in
+        const accounts = instance.getAllAccounts();
+        if (accounts.length === 0) {
+          // No session at all → start login
+          instance.loginRedirect({
+            scopes: ["Files.Read.All", "Sites.Read.All"],
+          });
+          return;
+        }
 
-    if (allAccounts.length === 0) {
-      // Only perform login if we truly have no session
-      await instance.loginRedirect({
-        scopes: ["Files.Read.All", "Sites.Read.All"],
+        // Try acquiring token silently
+        const silent = await instance.acquireTokenSilent({
+          scopes: ["Files.Read.All", "Sites.Read.All"],
+          account: accounts[0],
+        });
+
+        setAccessToken(silent.accessToken);
+        setTokenLoaded(true);
+      })
+      .catch((err) => {
+        console.error("MSAL redirect error:", err);
+        // fallback to redirect login
+        instance.loginRedirect({
+          scopes: ["Files.Read.All", "Sites.Read.All"],
+        });
       });
-    }
+  }, [instance]);
 
-    const result = await instance.acquireTokenSilent({
-      scopes: ["Files.Read.All", "Sites.Read.All"],
-      account: instance.getAllAccounts()[0],
-    });
-
-    setAccessToken(result.accessToken);
-    setTokenLoaded(true);
-  };
-
-  loadAuth();
-}, [instance]);
-
-
-  // 2) Load videos once when token is ready
+  // ----------------------------------------------------
+  // 2) Load videos when token is ready
+  // ----------------------------------------------------
   useEffect(() => {
     if (!tokenLoaded) return;
 
@@ -75,6 +92,9 @@ useEffect(() => {
     loadVideosOnce();
   }, [tokenLoaded, navigateToBook, setBooks]);
 
+  // ----------------------------------------------------
+  // Loading screen
+  // ----------------------------------------------------
   if (!tokenLoaded) {
     return (
       <div className="flex items-center justify-center h-screen text-3xl">
@@ -83,6 +103,9 @@ useEffect(() => {
     );
   }
 
+  // ----------------------------------------------------
+  // Page
+  // ----------------------------------------------------
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <HomeHeader />
