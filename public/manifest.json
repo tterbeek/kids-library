@@ -6,22 +6,22 @@
       "src": "icons/192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "form_factor": "narrow",
-      "purpose": "maskable"
+      "purpose": "any maskable",
+      "form_factor": "narrow"
     },
     {
       "src": "icons/512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "form_factor": "wide",
-      "purpose": "maskable"
+      "purpose": "any maskable",
+      "form_factor": "wide"
     },
     {
       "src": "icons/1024.png",
       "sizes": "1024x1024",
       "type": "image/png",
-      "form_factor": "wide",
-      "purpose": "maskable"
+      "purpose": "any maskable",
+      "form_factor": "wide"
     }
   ],
   "start_url": ".",
