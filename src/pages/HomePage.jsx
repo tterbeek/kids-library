@@ -37,13 +37,22 @@ export default function HomePage({ navigateToBook = () => {}, setBooks = () => {
         }
 
         // Try acquiring token silently
-        const silent = await instance.acquireTokenSilent({
-          scopes: ["Files.Read.All", "Sites.Read.All"],
-          account: accounts[0],
-        });
+          try {
+            const silent = await instance.acquireTokenSilent({
+              scopes: ["Files.Read.All", "Sites.Read.All"],
+              account: accounts[0],
+            });
 
-        setAccessToken(silent.accessToken);
-        setTokenLoaded(true);
+            setAccessToken(silent.accessToken);
+            setTokenLoaded(true);
+          } catch (silentError) {
+            console.warn("Silent token failed. Doing redirect login again.", silentError);
+
+            instance.loginRedirect({
+              scopes: ["Files.Read.All", "Sites.Read.All"],
+            });
+          }
+
       })
       .catch((err) => {
         console.error("MSAL redirect error:", err);
@@ -102,6 +111,10 @@ export default function HomePage({ navigateToBook = () => {}, setBooks = () => {
       </div>
     );
   }
+
+console.log("MSAL accounts:", instance.getAllAccounts());
+console.log("TokenLoaded:", tokenLoaded);
+
 
   // ----------------------------------------------------
   // Page
