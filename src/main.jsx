@@ -20,11 +20,12 @@ msalInstance.handleRedirectPromise().then((result) => {
   }
 });
 
-
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <MsalProvider instance={msalInstance}>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </MsalProvider>
-);
+msalInstance.handleRedirectPromise().then(() => {
+  ReactDOM.createRoot(document.getElementById("root")).render(
+    <MsalProvider instance={msalInstance}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </MsalProvider>
+  );
+});
