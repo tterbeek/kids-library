@@ -21,7 +21,7 @@ useEffect(() => {
 
     if (allAccounts.length === 0) {
       // Only perform login if we truly have no session
-      await instance.loginPopup({
+      await instance.loginRedirect({
         scopes: ["Files.Read.All", "Sites.Read.All"],
       });
     }
