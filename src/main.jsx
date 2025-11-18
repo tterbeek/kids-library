@@ -10,17 +10,15 @@ import { msalConfig } from "./msalConfig";
 
 const msalInstance = new PublicClientApplication(msalConfig);
 
-// ------------------------------------------------------------
-// ⭐ IMPORTANT: Handle MSAL redirect BEFORE React renders
-// This fixes iPad, PWA, Safari, and popup-blocked login issues.
-// ------------------------------------------------------------
-msalInstance.handleRedirectPromise().then((result) => {
-  if (result && result.account) {
-    msalInstance.setActiveAccount(result.account);
+// --- SAFE INITIALIZATION FIX ---
+async function start() {
+  try {
+    await msalInstance.initialize();
+    await msalInstance.handleRedirectPromise();
+  } catch (err) {
+    console.error("MSAL failed during initialize or redirect:", err);
   }
-});
 
-msalInstance.handleRedirectPromise().then(() => {
   ReactDOM.createRoot(document.getElementById("root")).render(
     <MsalProvider instance={msalInstance}>
       <BrowserRouter>
@@ -28,4 +26,6 @@ msalInstance.handleRedirectPromise().then(() => {
       </BrowserRouter>
     </MsalProvider>
   );
-});
+}
+
+start();
