@@ -1,5 +1,5 @@
 // src/pages/HomePage.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import HomeHeader from "../components/HomeHeader";
 import BookGrid from "../components/BookGrid";
 import { useMsal } from "@azure/msal-react";
@@ -10,6 +10,14 @@ export default function HomePage({ navigateToBook = () => {}, setBooks = () => {
 
   const [tokenLoaded, setTokenLoaded] = useState(false);
   const [localBooks, setLocalBooks] = useState([]);
+  const [selectedDoelgroep, setSelectedDoelgroep] = useState(() => {
+    return localStorage.getItem("doelgroep_filter") || "";
+  });
+
+  // Persist filter selection
+  useEffect(() => {
+    localStorage.setItem("doelgroep_filter", selectedDoelgroep);
+  }, [selectedDoelgroep]);
 
   // ----------------------------------------------------
   // 1) Handle Redirect Callback FIRST
@@ -72,9 +80,20 @@ export default function HomePage({ navigateToBook = () => {}, setBooks = () => {
     const loadVideosOnce = async () => {
       const items = await listVideos();
 
-      const videos = items.filter((f) =>
-        f.name.toLowerCase().endsWith(".mp4")
-      );
+      const isPublished = (value) => {
+        if (typeof value === "string") {
+          return value.trim().toLowerCase() === "ja";
+        }
+        return Boolean(value);
+      };
+
+      const videos = items.filter((f) => {
+        const isVideo = f.name.toLowerCase().endsWith(".mp4");
+        if (!isVideo) return false;
+
+        const publishedValue = f.listItem?.fields?.Gepubliceerd;
+        return isPublished(publishedValue);
+      });
       const images = items.filter((f) =>
         f.name.match(/\.(jpg|jpeg|png)$/i)
       );
@@ -82,6 +101,12 @@ export default function HomePage({ navigateToBook = () => {}, setBooks = () => {
       const books = videos.map((v) => {
         const base = v.name.replace(/\.[^/.]+$/, "");
         const thumb = images.find((i) => i.name.startsWith(base));
+        const doelgroepField = v.listItem?.fields?.Doelgroep;
+        const doelgroep = Array.isArray(doelgroepField)
+          ? doelgroepField
+          : doelgroepField
+          ? [doelgroepField]
+          : [];
 
         return {
           id: v.id,
@@ -90,6 +115,7 @@ export default function HomePage({ navigateToBook = () => {}, setBooks = () => {
           cover: thumb
             ? thumb["@microsoft.graph.downloadUrl"]
             : "/default-cover.png",
+          doelgroep,
           onClick: () => navigateToBook(v.id),
         };
       });
@@ -100,6 +126,18 @@ export default function HomePage({ navigateToBook = () => {}, setBooks = () => {
 
     loadVideosOnce();
   }, [tokenLoaded, navigateToBook, setBooks]);
+
+  // ----------------------------------------------------
+  // Memoized doelgroep options & filtered list (must run every render)
+  // ----------------------------------------------------
+  const doelgroepOptions = useMemo(() => {
+    const allValues = localBooks.flatMap((b) => b.doelgroep || []);
+    return Array.from(new Set(allValues)).sort();
+  }, [localBooks]);
+
+  const filteredBooks = selectedDoelgroep
+    ? localBooks.filter((b) => (b.doelgroep || []).includes(selectedDoelgroep))
+    : localBooks;
 
   // ----------------------------------------------------
   // Loading screen
@@ -121,9 +159,13 @@ console.log("TokenLoaded:", tokenLoaded);
   // ----------------------------------------------------
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <HomeHeader />
+      <HomeHeader
+        doelgroepOptions={doelgroepOptions}
+        selectedDoelgroep={selectedDoelgroep}
+        onSelectDoelgroep={setSelectedDoelgroep}
+      />
       <main className="flex-1 overflow-y-auto">
-        <BookGrid books={localBooks} />
+        <BookGrid books={filteredBooks} />
       </main>
     </div>
   );

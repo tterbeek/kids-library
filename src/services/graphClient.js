@@ -35,7 +35,7 @@ export const listVideos = async () => {
     return videoCache;
   }
 
-  const url = `https://graph.microsoft.com/v1.0/sites/${SITE_ID}/drives/${DRIVE_ID}/root/children`;
+  const url = `https://graph.microsoft.com/v1.0/sites/${SITE_ID}/drives/${DRIVE_ID}/root/children?expand=listItem($expand=fields)`;
 
   // Retry up to 3 times on 429 errors
   for (let attempt = 0; attempt < 3; attempt++) {

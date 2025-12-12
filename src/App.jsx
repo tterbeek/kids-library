@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 
 import HomePage from "./pages/HomePage";
@@ -8,9 +8,12 @@ export default function App() {
   const navigate = useNavigate();
   const [books, setBooks] = useState([]);
 
-  const navigateToBook = (id) => {
-    navigate(`/book/${id}`);
-  };
+  const navigateToBook = useCallback(
+    (id) => {
+      navigate(`/book/${id}`);
+    },
+    [navigate]
+  );
 
   return (
     <Routes>

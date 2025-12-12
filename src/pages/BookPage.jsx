@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, Pause } from "lucide-react";
+import { ArrowLeft, Play, Pause, RotateCcw, Home } from "lucide-react";
 
 
 export default function BookPage({ books }) {
@@ -12,6 +12,7 @@ export default function BookPage({ books }) {
   const [uiVisible, setUiVisible] = useState(false);
   const [videoPaused, setVideoPaused] = useState(false);
   const [icon, setIcon] = useState("pause");
+  const [videoEnded, setVideoEnded] = useState(false);
 
   const [progress, setProgress] = useState(0);
 
@@ -21,6 +22,7 @@ export default function BookPage({ books }) {
   const book = books?.find((b) => b.id === id);
 
   const STORAGE_KEY = `video_progress_${id}`;
+  const SEEN_KEY = `video_seen_${id}`;
 
   // ------------------------------------------------------------
   // Load saved position
@@ -85,6 +87,7 @@ export default function BookPage({ books }) {
       video.play();
       setVideoPaused(false);
       setIcon("play");
+      setVideoEnded(false);
       startHideTimer(false);
     } else {
       video.pause();
@@ -112,9 +115,41 @@ export default function BookPage({ books }) {
     return () => video.removeEventListener("timeupdate", update);
   }, []);
 
+  // ------------------------------------------------------------
+  // Handle video end/start events
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleEnded = () => {
+      setVideoEnded(true);
+      setVideoPaused(true);
+      setIcon("pause");
+      setUiVisible(true);
+      localStorage.setItem(SEEN_KEY, "true");
+      localStorage.setItem(STORAGE_KEY, "0"); // reset saved timer
+      setProgress(0);
+      video.currentTime = 0;
+      clearHideTimer();
+    };
+
+    const handlePlay = () => {
+      setVideoEnded(false);
+    };
+
+    video.addEventListener("ended", handleEnded);
+    video.addEventListener("play", handlePlay);
+
+    return () => {
+      video.removeEventListener("ended", handleEnded);
+      video.removeEventListener("play", handlePlay);
+    };
+  }, [SEEN_KEY, STORAGE_KEY]);
+
   const handleSliderChange = (e) => {
     const newProgress = Number(e.target.value);
     setProgress(newProgress);
+    setVideoEnded(false);
 
     const video = videoRef.current;
     if (!video || !video.duration) return;
@@ -123,6 +158,19 @@ export default function BookPage({ books }) {
 
     setUiVisible(true);
     startHideTimer(video.paused);
+  };
+
+  const handleReplay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.currentTime = 0;
+    video.play();
+    setProgress(0);
+    setVideoEnded(false);
+    setVideoPaused(false);
+    setIcon("play");
+    startHideTimer(false);
   };
 
   // ------------------------------------------------------------
@@ -165,7 +213,7 @@ export default function BookPage({ books }) {
         <div className="absolute inset-0 z-20" onClick={handleTap} />
 
         {/* CENTER ICON */}
-        {uiVisible && (
+        {uiVisible && !videoEnded && (
           <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none animate-fadeInZoom">
             <div className="bg-white/80 p-6 rounded-full shadow-xl flex items-center justify-center">
               {icon === "pause" ? (
@@ -206,6 +254,31 @@ export default function BookPage({ books }) {
                 margin-top: -13px;
               }
             `}</style>
+          </div>
+        )}
+
+        {/* END OVERLAY */}
+        {videoEnded && (
+          <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-8">
+            <div className="text-white text-2xl font-semibold">
+              Video afgelopen
+            </div>
+            <div className="flex gap-4">
+              <button
+                onClick={handleReplay}
+                className="flex items-center gap-2 bg-white text-black px-6 py-3 rounded-2xl shadow-lg text-lg active:scale-95"
+              >
+                <RotateCcw className="w-6 h-6" strokeWidth={2.5} />
+                Nog een keer
+              </button>
+              <button
+                onClick={() => navigate("/")}
+                className="flex items-center gap-2 bg-black text-white px-6 py-3 rounded-2xl shadow-lg text-lg border border-white/40 active:scale-95"
+              >
+                <Home className="w-6 h-6" strokeWidth={2.5} />
+                Naar start
+              </button>
+            </div>
           </div>
         )}
 
